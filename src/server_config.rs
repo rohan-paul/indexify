@@ -18,7 +18,13 @@ pub enum EmbeddingModelKind {
     #[serde(rename(serialize = "t5-base", deserialize = "t5-base"))]
     T5Base,
 
-    #[serde(rename(serialize = "text-embedding-ada-002", deserialize = "text-embedding-ada-002"))]
+    #[serde(rename(serialize = "all-mpnet-base-v2", deserialize = "all-mpnet-base-v2"))]
+    AllMPNetBaseV2,
+
+    #[serde(rename(
+        serialize = "text-embedding-ada-002",
+        deserialize = "text-embedding-ada-002"
+    ))]
     OpenAIAda02,
 }
 
@@ -28,6 +34,7 @@ impl fmt::Display for EmbeddingModelKind {
             EmbeddingModelKind::AllMiniLmL12V2 => write!(f, "all-minilm-l12-v2"),
             EmbeddingModelKind::AllMiniLmL6V2 => write!(f, "all-minilm-l6-v2"),
             EmbeddingModelKind::T5Base => write!(f, "t5-base"),
+            EmbeddingModelKind::AllMPNetBaseV2 => write!(f, "all-mpnet-base-v2"),
             EmbeddingModelKind::OpenAIAda02 => write!(f, "text-embedding-ada-002"),
         }
     }
@@ -35,21 +42,21 @@ impl fmt::Display for EmbeddingModelKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DeviceKind {
-    #[serde(rename(serialize="cpu", deserialize="cpu"))]
+    #[serde(rename(serialize = "cpu", deserialize = "cpu"))]
     Cpu,
 
-    #[serde(rename(serialize="gpu", deserialize="gpu"))]
+    #[serde(rename(serialize = "gpu", deserialize = "gpu"))]
     Gpu,
 
-    #[serde(rename(serialize="remote", deserialize="remote"))]
+    #[serde(rename(serialize = "remote", deserialize = "remote"))]
     Remote,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddingModel {
-    #[serde(rename(serialize="model", deserialize="model"))]
+    #[serde(rename(serialize = "model", deserialize = "model"))]
     pub model_kind: EmbeddingModelKind,
-    #[serde(rename(serialize="device", deserialize="device"))]
+    #[serde(rename(serialize = "device", deserialize = "device"))]
     pub device_kind: DeviceKind,
 }
 

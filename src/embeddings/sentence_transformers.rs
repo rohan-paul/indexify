@@ -55,12 +55,22 @@ impl SentenceTransformerModels {
                     .map_err(|e| EmbeddingGeneratorError::ModelLoadingError(e.to_string()))?;
                     models.insert(EmbeddingModelKind::AllMiniLmL6V2.to_string(), model);
                 }
+                EmbeddingModelKind::AllMPNetBaseV2 => {
+                    let model =
+                        SentenceEmbeddingsBuilder::local("/home/diptanuc/Src/all-mpnet-base-v2/")
+                            .create_model()
+                            .map_err(|e| {
+                                EmbeddingGeneratorError::ModelLoadingError(e.to_string())
+                            })?;
+                    models.insert(EmbeddingModelKind::AllMPNetBaseV2.to_string(), model);
+                }
                 EmbeddingModelKind::T5Base => {
                     let model = SentenceEmbeddingsBuilder::remote(
                         SentenceEmbeddingsModelType::SentenceT5Base,
                     )
                     .create_model()
                     .map_err(|e| EmbeddingGeneratorError::ModelLoadingError(e.to_string()))?;
+
                     models.insert(EmbeddingModelKind::T5Base.to_string(), model);
                 }
                 _ => {
@@ -138,6 +148,33 @@ mod tests {
             .unwrap();
         let embeddings = embedding_generator
             .generate_embeddings(inputs, "all-minilm-l12-v2".into())
+            .await
+            .unwrap();
+        assert_eq!(embeddings.len(), 3);
+        assert_eq!(embeddings[0].len(), 384);
+    }
+
+    #[tokio::test]
+    async fn test_local_mpnet_basev2() {
+        use super::*;
+        use server_config::DeviceKind;
+        use server_config::EmbeddingModelKind::AllMPNetBaseV2;
+
+        let inputs = vec![
+            "Hello, world!".to_string(),
+            "Hello, NBA!".to_string(),
+            "Hello, NFL!".to_string(),
+        ];
+        let embedding_generator =
+            SentenceTransformerModels::new(vec![server_config::EmbeddingModel {
+                model_kind: AllMPNetBaseV2,
+                device_kind: DeviceKind::Cpu,
+            }])
+            .unwrap();
+
+        println!("LOADED MODEL 1111");
+        let embeddings = embedding_generator
+            .generate_embeddings(inputs, "all-mpnet-base-v2".into())
             .await
             .unwrap();
         assert_eq!(embeddings.len(), 3);

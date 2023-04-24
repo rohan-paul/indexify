@@ -2,8 +2,8 @@ mod openai;
 mod sentence_transformers;
 
 use super::server_config::{
-    self, EmbeddingModelKind::AllMiniLmL12V2, EmbeddingModelKind::AllMiniLmL6V2,
-    EmbeddingModelKind::OpenAIAda02, EmbeddingModelKind::T5Base,
+    self, EmbeddingModelKind::AllMPNetBaseV2, EmbeddingModelKind::AllMiniLmL12V2,
+    EmbeddingModelKind::AllMiniLmL6V2, EmbeddingModelKind::OpenAIAda02, EmbeddingModelKind::T5Base,
 };
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -58,7 +58,7 @@ impl EmbeddingRouter {
         for model in config.available_models.clone() {
             model_names.push(model.model_kind.to_string());
             match model.model_kind {
-                AllMiniLmL12V2 | T5Base | AllMiniLmL6V2 => {
+                AllMiniLmL12V2 | T5Base | AllMiniLmL6V2 | AllMPNetBaseV2 => {
                     sentence_transformers.push(model.clone());
                 }
                 OpenAIAda02 => {

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 
+use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 use thiserror::Error;
@@ -39,7 +40,7 @@ pub struct CreateIndexParams {
     pub unique_params: Option<Vec<String>>,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, FromQueryResult)]
 pub struct SearchResult {
     pub chunk_id: String,
     pub confidence_score: f32,
@@ -72,6 +73,7 @@ pub type VectorDBTS = Arc<dyn VectorDb + Sync + Send>;
 #[derive(Debug, Clone)]
 pub struct VectorChunk {
     pub chunk_id: String,
+    // TODO should rename this to "embedding"
     pub embeddings: Vec<f32>,
 }
 impl VectorChunk {

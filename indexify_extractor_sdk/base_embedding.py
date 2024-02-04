@@ -1,8 +1,7 @@
 from abc import abstractmethod
 from typing import Any, Callable, List, Literal
 from langchain import text_splitter
-from dataclasses import dataclass
-from dataclasses_json import dataclass_json
+from pydantic import BaseModel
 
 from .base_extractor import (
     Content,
@@ -10,10 +9,7 @@ from .base_extractor import (
     Feature,
 )
 
-
-@dataclass_json
-@dataclass
-class EmbeddingInputParams:
+class EmbeddingInputParams(BaseModel):
     overlap: int = 0
     chunk_size: int = 100
     text_splitter: str = "recursive"
@@ -25,7 +21,7 @@ class BaseEmbeddingExtractor(Extractor):
     def __init__(self, max_context_length: int):
         self._model_context_length: int = max_context_length
 
-    def extract(self, content: Content, params: EmbeddingInputParams=EmbeddingInputParams()) -> List[Content]:
+    def extract(self, content: Content, params: EmbeddingInputParams) -> List[Content]:
         if params.chunk_size == 0:
             params.chunk_size = self._model_context_length
         splitter: Callable[[str], List[str]] = self._create_splitter(params)

@@ -95,39 +95,45 @@ pub struct ExtractorDescription {
     pub input_mime_types: Vec<String>,
 }
 
-impl From<ExtractorDescription> for indexify_coordinator::Extractor {
-    fn from(value: ExtractorDescription) -> Self {
+impl TryFrom<ExtractorDescription> for indexify_coordinator::Extractor {
+    type Error = anyhow::Error;
+
+    fn try_from(value: ExtractorDescription) -> Result<Self> {
         let mut output_schema = HashMap::new();
         for (output_name, embedding_schema) in value.outputs {
             output_schema.insert(
                 output_name,
-                serde_json::to_string(&embedding_schema).unwrap(),
+                serde_json::to_string(&embedding_schema)
+                    .map_err(|e| anyhow!("Failed to serialize output schema: {}", e))?,
             );
         }
-        Self {
+        Ok(Self {
             name: value.name,
             description: value.description,
             input_params: value.input_params.to_string(),
             outputs: output_schema,
             input_mime_types: value.input_mime_types,
-        }
+        })
     }
 }
 
-impl From<indexify_coordinator::Extractor> for ExtractorDescription {
-    fn from(value: indexify_coordinator::Extractor) -> Self {
+impl TryFrom<indexify_coordinator::Extractor> for ExtractorDescription {
+    type Error = anyhow::Error;
+
+    fn try_from(value: indexify_coordinator::Extractor) -> Result<Self> {
         let mut output_schema = HashMap::new();
         for (output_name, embedding_schema) in value.outputs {
-            let embedding_schema: OutputSchema = serde_json::from_str(&embedding_schema).unwrap();
+            let embedding_schema: OutputSchema = serde_json::from_str(&embedding_schema)
+                .map_err(|e| anyhow!("Failed to parse output schema: {}", e))?;
             output_schema.insert(output_name, embedding_schema);
         }
-        Self {
+        Ok(Self {
             name: value.name,
             description: value.description,
             input_params: serde_json::from_str(&value.input_params).unwrap(),
             outputs: output_schema,
             input_mime_types: value.input_mime_types,
-        }
+        })
     }
 }
 

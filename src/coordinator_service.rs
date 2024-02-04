@@ -170,9 +170,12 @@ impl CoordinatorService for CoordinatorServiceServer {
             .create_binding(extractor_binding, extractor.clone())
             .await
             .map_err(|e| tonic::Status::aborted(e.to_string()))?;
+        let extractor = extractor
+            .try_into()
+            .map_err(|e: anyhow::Error| tonic::Status::aborted(e.to_string()))?;
         Ok(tonic::Response::new(ExtractorBindResponse {
             created_at: timestamp_secs() as i64,
-            extractor: Some(extractor.into()),
+            extractor: Some(extractor),
             index_name_table_mapping,
             output_index_name_mapping,
         }))
@@ -254,11 +257,16 @@ impl CoordinatorService for CoordinatorServiceServer {
             .list_extractors()
             .await
             .map_err(|e| tonic::Status::aborted(e.to_string()))?;
-        let extractors = extractors
-            .into_iter()
-            .map(|e| e.into())
-            .collect::<Vec<indexify_coordinator::Extractor>>();
-        Ok(tonic::Response::new(ListExtractorsResponse { extractors }))
+        let mut extractors_resp = vec![];
+        for extractor in extractors {
+            let extractor = extractor.try_into().map_err(|e: anyhow::Error| {
+                tonic::Status::aborted(format!("unable to convert extractor: {}", e.to_string()))
+            })?;
+            extractors_resp.push(extractor);
+        }
+        Ok(tonic::Response::new(ListExtractorsResponse {
+            extractors: extractors_resp,
+        }))
     }
 
     async fn register_executor(
@@ -269,9 +277,12 @@ impl CoordinatorService for CoordinatorServiceServer {
         let extractor = request
             .extractor
             .ok_or(tonic::Status::aborted("missing extractor"))?;
+        let extractor = extractor.try_into().map_err(|e: anyhow::Error| {
+            tonic::Status::aborted(format!("unable to convert extractor: {}", e.to_string()))
+        })?;
         let _resp = self
             .coordinator
-            .register_executor(&request.addr, &request.executor_id, extractor.into())
+            .register_executor(&request.addr, &request.executor_id, extractor)
             .await
             .map_err(|e| tonic::Status::aborted(e.to_string()))?;
         Ok(tonic::Response::new(RegisterExecutorResponse {

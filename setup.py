@@ -31,8 +31,7 @@ REQUIRED = [
     "torch",
     "langchain",
     "transformers",
-    "dataclasses-json",
-    "marshmallow",
+    "pydantic",
 ]
 
 # What packages are optional?

@@ -138,7 +138,7 @@ impl ExtractorExecutor {
         let req = RegisterExecutorRequest {
             executor_id: self.executor_id.clone(),
             addr: self.listen_addr.clone(),
-            extractor: Some(self.extractor_description.clone().into()),
+            extractor: Some(self.extractor_description.clone().try_into().unwrap()),
         };
         let _resp = coordinator_client
             .get()

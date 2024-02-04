@@ -94,3 +94,6 @@ serve-docs: ## Serve documentation
 install: build-release ## Build the application and install it to the system
 	install -d $(DESTDIR)$(BINDIR)
 	install -m 755 $(TARGET) $(DESTDIR)$(BINDIR)/$(APPLICATION_NAME)
+
+gen-py-proto:
+	python -m grpc_tools.protoc -Iproto --python_out=indexify_extractor_sdk/ --pyi_out=indexify_extractor_sdk/ --grpc_python_out=indexify_extractor_sdk/ proto/coordinator_service.proto

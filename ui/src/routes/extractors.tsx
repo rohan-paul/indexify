@@ -47,20 +47,18 @@ const ExtractorsPage = () => {
       <Typography mb={3} variant="h3" component="h1">
         Extractors
       </Typography>
-      <div style={{ height: 400, width: "100%" }}>
-        <DataGrid
-          sx={{ backgroundColor: "white" }}
-          getRowId={getRowId}
-          rows={extractors}
-          columns={columns}
-          initialState={{
-            pagination: {
-              paginationModel: { page: 0, pageSize: 5 },
-            },
-          }}
-          pageSizeOptions={[5, 10]}
-        />
-      </div>
+      <DataGrid
+        sx={{ backgroundColor: "white" }}
+        getRowId={getRowId}
+        rows={extractors}
+        columns={columns}
+        initialState={{
+          pagination: {
+            paginationModel: { page: 0, pageSize: 5 },
+          },
+        }}
+        pageSizeOptions={[5, 10]}
+      />
     </div>
   );
 };

@@ -4,21 +4,30 @@ import { Alert, Typography } from "@mui/material";
 import { Box, Stack } from "@mui/system";
 import React from "react";
 import CompressIcon from "@mui/icons-material/Compress";
+import Repository from "../lib/Indexify/repository";
+import { Link } from "react-router-dom";
+import { useTheme } from "@emotion/react";
 
 const getRowId = (row: IExtractorBinding) => {
   return row.name;
 };
 
-const ExtractorBindingsTable = ({
-  bindings,
-}: {
-  bindings: IExtractorBinding[];
-}) => {
+const ExtractorBindingsTable = ({ repository }: { repository: Repository }) => {
   const columns: GridColDef[] = [
     {
       field: "name",
       headerName: "Name",
       width: 300,
+      renderCell: (params) => {
+        return (
+          <Link
+            color="inherit"
+            to={`/${repository.name}/bindings/${params.value}`}
+          >
+            {params.value}
+          </Link>
+        );
+      },
     },
     {
       field: "extractor",
@@ -49,7 +58,7 @@ const ExtractorBindingsTable = ({
   ];
 
   const renderContent = () => {
-    if (bindings.length === 0) {
+    if (repository.extractorBindings.length === 0) {
       return (
         <Box mt={1} mb={2}>
           <Alert variant="outlined" severity="info">
@@ -68,7 +77,7 @@ const ExtractorBindingsTable = ({
           sx={{ backgroundColor: "white" }}
           autoHeight
           getRowId={getRowId}
-          rows={bindings}
+          rows={repository.extractorBindings}
           columns={columns}
           initialState={{
             pagination: {

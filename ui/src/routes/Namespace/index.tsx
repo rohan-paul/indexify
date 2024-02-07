@@ -1,14 +1,14 @@
-import IndexifyClient from "../lib/Indexify/client";
-import Repository from "../lib/Indexify/repository";
+import IndexifyClient from "../../lib/Indexify/client";
+import Repository from "../../lib/Indexify/repository";
 import { useLoaderData, LoaderFunctionArgs } from "react-router-dom";
 import { Box, Typography, Stack } from "@mui/material";
-import { IContent, IIndex } from "../lib/Indexify/types";
-import IndexTable from "../components/IndexTable";
-import ContentTable from "../components/ContentTable";
+import { IContent, IIndex } from "../../lib/Indexify/types";
+import IndexTable from "../../components/IndexTable";
+import ContentTable from "../../components/ContentTable";
 import React from "react";
-import ExtractorBindingsTable from "../components/ExtractorBindingsTable";
+import ExtractorBindingsTable from "../../components/ExtractorBindingsTable";
 import CircleIcon from "@mui/icons-material/Circle";
-import { stringToColor } from "../utils/helpers";
+import { stringToColor } from "../../utils/helpers";
 
 export async function loader({ params }: LoaderFunctionArgs) {
   const name = params.namespace;
@@ -23,7 +23,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
   return { repository, indexes, contentList };
 }
 
-const RepositoryPage = () => {
+const NamespacePage = () => {
   const { repository, indexes, contentList } = useLoaderData() as {
     repository: Repository;
     indexes: IIndex[];
@@ -44,11 +44,11 @@ const RepositoryPage = () => {
           {repository.name}
         </Typography>
       </Box>
-      <ExtractorBindingsTable bindings={repository.extractorBindings} />
+      <ExtractorBindingsTable repository={repository} />
       <IndexTable indexes={indexes} />
       <ContentTable content={contentList} />
     </Stack>
   );
 };
 
-export default RepositoryPage;
+export default NamespacePage;

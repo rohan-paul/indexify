@@ -1,6 +1,7 @@
 import { Typography } from "@mui/material";
 import { Box } from "@mui/system";
 import React from "react";
+import { Link } from "react-router-dom";
 
 const HomePage = () => {
   return (
@@ -10,9 +11,9 @@ const HomePage = () => {
       </Typography>
 
       <Typography variant="body1">
-        <a href="https://getindexify.ai" target="_blank" rel="noreferrer">
+        <Link to="https://getindexify.ai" target="_blank" rel="noreferrer">
           Read documentation
-        </a>
+        </Link>
       </Typography>
     </Box>
   );

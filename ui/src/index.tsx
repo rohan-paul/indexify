@@ -4,10 +4,13 @@ import "./index.css";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-import Root, { loader as RootLoader } from "./routes/root";
+import Root, { loader as RootLoader } from "./routes/Root";
 import { ErrorPage } from "./error-page";
-import Extractors, { loader as ExtractorsLoader } from "./routes/extractors";
-import Repository, { loader as RepositoryLoader } from "./routes/repository";
+import Extractors, { loader as ExtractorsLoader } from "./routes/Extractors";
+import Repository, { loader as RepositoryLoader } from "./routes/Namespace";
+import ExtractorBinding, {
+  loader as ExtractorBindingLoader,
+} from "./routes/Namespace/ExtractorBinding";
 
 const router = createBrowserRouter([
   {
@@ -27,6 +30,12 @@ const router = createBrowserRouter([
         element: <Extractors />,
         loader: ExtractorsLoader,
         errorElement: <ErrorPage />,
+      },
+      {
+        path: "/:namespace/bindings/:bindingname",
+        element: <ExtractorBinding />,
+        loader: ExtractorBindingLoader,
+        errorElement: <ExtractorBinding />,
       },
     ],
   },

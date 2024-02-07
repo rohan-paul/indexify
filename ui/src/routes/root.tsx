@@ -10,7 +10,7 @@ import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import Container from "@mui/material/Container";
-import Link from "@mui/material/Link";
+import { Link } from "react-router-dom";
 import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { MainListItems } from "../components/listItems";
@@ -51,7 +51,7 @@ function Copyright(props: any) {
       {...props}
     >
       {"Copyright © "}
-      <Link color="inherit" href="https://tensorlake.ai/">
+      <Link target="_blank" color="inherit" to="https://tensorlake.ai/">
         Tensorlake
       </Link>{" "}
       {new Date().getFullYear()}
@@ -165,7 +165,7 @@ export default function Dashboard() {
               flexGrow={1}
             >
               <img src="/logo.svg" alt="logo" />
-              <a href={"/"} style={{ textDecoration: "none", color: "white" }}>
+              <Link to={"/"} style={{ textDecoration: "none", color: "white" }}>
                 <Typography
                   component="h1"
                   variant="h6"
@@ -175,7 +175,7 @@ export default function Dashboard() {
                 >
                   Indexify
                 </Typography>
-              </a>
+              </Link>
             </Stack>
 
             <Button
@@ -211,8 +211,12 @@ export default function Dashboard() {
               </Typography>
               {namespaces.map((name) => {
                 return (
-                  <Link sx={{ textDecoration: "none" }} href={`/${name}`}>
-                    <MenuItem key={name} onClick={handleClose}>
+                  <Link
+                    key={name}
+                    style={{ textDecoration: "none" }}
+                    to={`/${name}`}
+                  >
+                    <MenuItem onClick={handleClose}>
                       <CircleIcon
                         sx={{
                           width: "15px",

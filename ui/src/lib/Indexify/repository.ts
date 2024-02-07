@@ -1,10 +1,11 @@
-import axios from "axios";
-import { IContent, IExtractorBinding, IIndex } from "./types";
+import axios, { AxiosInstance } from "axios";
+import { IContent, IExtractorBinding, IIndex, ITask } from "./types";
 class Repository {
   private serviceUrl: string;
   public name: string;
   public extractorBindings: IExtractorBinding[];
   public filters: Record<string, string>;
+  private client: AxiosInstance;
 
   constructor(
     serviceUrl: string,
@@ -12,6 +13,7 @@ class Repository {
     extractorBindings: IExtractorBinding[] = [],
     filters: Record<string, string> = {}
   ) {
+    this.client = axios.create({ baseURL: serviceUrl });
     this.serviceUrl = serviceUrl;
     this.name = name;
     this.extractorBindings = extractorBindings;
@@ -36,6 +38,17 @@ class Repository {
       }
     );
     return resp.data.content_list;
+  }
+
+  async getTasks(extractor_binding: string): Promise<ITask[]> {
+    return this.client
+      .get("tasks", {
+        params: {
+          repository: this.name,
+          extractor_binding,
+        },
+      })
+      .then((res) => res.data.tasks);
   }
 }
 

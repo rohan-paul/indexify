@@ -1,16 +1,46 @@
+import React from "react";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { ITask } from "../lib/Indexify/types";
 import { Alert, Typography } from "@mui/material";
 import { Box, Stack } from "@mui/system";
-import React from "react";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import moment from "moment";
+import Repository from "../lib/Indexify/repository";
+import { Link } from "react-router-dom";
 
-const TasksTable = ({ tasks }: { tasks: ITask[] }) => {
+const TasksTable = ({
+  repository,
+  tasks,
+}: {
+  repository: Repository;
+  tasks: ITask[];
+}) => {
   const columns: GridColDef[] = [
     {
       field: "id",
       headerName: "ID",
+      width: 170,
+    },
+    {
+      field: "content_metadata.id",
+      headerName: "Content ID",
+      renderCell: (params) => (
+        <Link
+          to={`/${repository.name}/content/${params.row.content_metadata.id}`}
+        >
+          {params.row.content_metadata.id}
+        </Link>
+      ),
+      width: 170,
+    },
+    {
+      field: "extractor_binding",
+      headerName: "Extractor Binding",
+      renderCell: (params) => (
+        <Link to={`/${repository.name}/bindings/${params.value}`}>
+          {params.value}
+        </Link>
+      ),
       width: 200,
     },
     {
@@ -19,27 +49,15 @@ const TasksTable = ({ tasks }: { tasks: ITask[] }) => {
       width: 100,
     },
     {
-      field: "content_metadata.source",
-      headerName: "Source",
-      renderCell: (params) => {
-        return params.row.content_metadata.source;
-      },
-      width: 100,
-    },
-    {
       field: "content_metadata.storage_url",
       headerName: "Storage URL",
-      renderCell: (params) => {
-        return params.row.content_metadata.storage_url;
-      },
+      valueGetter: (params) => params.row.content_metadata.storage_url,
       width: 500,
     },
     {
-      field: "content_metadata",
+      field: "content_metadata.source",
       headerName: "Source",
-      renderCell: (params) => {
-        return params.value.source;
-      },
+      valueGetter: (params) => params.row.content_metadata.source,
       width: 100,
     },
     {
@@ -50,6 +68,7 @@ const TasksTable = ({ tasks }: { tasks: ITask[] }) => {
           "MM/DD/YYYY h:mm A"
         );
       },
+      valueGetter: (params) => params.row.content_metadata.created_at,
       width: 200,
     },
   ];
@@ -77,10 +96,10 @@ const TasksTable = ({ tasks }: { tasks: ITask[] }) => {
           columns={columns}
           initialState={{
             pagination: {
-              paginationModel: { page: 0, pageSize: 5 },
+              paginationModel: { page: 0, pageSize: 20 },
             },
           }}
-          pageSizeOptions={[5, 10]}
+          pageSizeOptions={[20, 50]}
         />
       </Box>
     );

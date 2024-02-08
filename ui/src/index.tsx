@@ -4,13 +4,18 @@ import "./index.css";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-import Root, { loader as RootLoader } from "./routes/Root";
+import Root, { loader as RootLoader } from "./routes/root";
 import { ErrorPage } from "./error-page";
-import Extractors, { loader as ExtractorsLoader } from "./routes/Extractors";
+import Extractors, {
+  loader as ExtractorsLoader,
+} from "./routes/ExtractorsPage";
 import Repository, { loader as RepositoryLoader } from "./routes/Namespace";
-import ExtractorBinding, {
+import ExtractorBindingPage, {
   loader as ExtractorBindingLoader,
-} from "./routes/Namespace/ExtractorBinding";
+} from "./routes/Namespace/ExtractorBindingPage";
+import ContentPage, {
+  loader as ContentLoader,
+} from "./routes/Namespace/ContentPage";
 
 const router = createBrowserRouter([
   {
@@ -33,9 +38,15 @@ const router = createBrowserRouter([
       },
       {
         path: "/:namespace/bindings/:bindingname",
-        element: <ExtractorBinding />,
+        element: <ExtractorBindingPage />,
         loader: ExtractorBindingLoader,
-        errorElement: <ExtractorBinding />,
+        errorElement: <ExtractorBindingPage />,
+      },
+      {
+        path: "/:namespace/content/:parentId",
+        element: <ContentPage />,
+        loader: ContentLoader,
+        errorElement: <ContentPage />,
       },
     ],
   },

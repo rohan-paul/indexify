@@ -165,7 +165,7 @@ export default function Dashboard() {
               flexGrow={1}
             >
               <img src="/logo.svg" alt="logo" />
-              <Link to={"/"} style={{ textDecoration: "none", color: "white" }}>
+              <a href="/" style={{ textDecoration: "none", color: "white" }}>
                 <Typography
                   component="h1"
                   variant="h6"
@@ -175,7 +175,7 @@ export default function Dashboard() {
                 >
                   Indexify
                 </Typography>
-              </Link>
+              </a>
             </Stack>
 
             <Button
@@ -211,10 +211,10 @@ export default function Dashboard() {
               </Typography>
               {namespaces.map((name) => {
                 return (
-                  <Link
+                  <a
                     key={name}
                     style={{ textDecoration: "none" }}
-                    to={`/${name}`}
+                    href={`/${name}`}
                   >
                     <MenuItem onClick={handleClose}>
                       <CircleIcon
@@ -226,7 +226,7 @@ export default function Dashboard() {
                       />
                       {name}
                     </MenuItem>
-                  </Link>
+                  </a>
                 );
               })}
             </Menu>

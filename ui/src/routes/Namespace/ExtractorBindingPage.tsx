@@ -40,7 +40,7 @@ const ExtractorBindingPage = () => {
           {bindingname}
         </Typography>
       </Box>
-      <TasksTable tasks={tasks} />
+      <TasksTable repository={repository} tasks={tasks} />
     </Stack>
   );
 };

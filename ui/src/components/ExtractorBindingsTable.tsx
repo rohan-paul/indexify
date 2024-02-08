@@ -17,7 +17,7 @@ const ExtractorBindingsTable = ({ repository }: { repository: Repository }) => {
     {
       field: "name",
       headerName: "Name",
-      width: 300,
+      width: 200,
       renderCell: (params) => {
         return (
           <Link

@@ -5,10 +5,32 @@ import { Box, Stack } from "@mui/system";
 import ArticleIcon from "@mui/icons-material/Article";
 import React from "react";
 import moment from "moment";
+import Repository from "../lib/Indexify/repository";
+import { Link } from "react-router-dom";
 
-const ContentTable = ({ content }: { content: IContent[] }) => {
+const ContentTable = ({
+  content,
+  repository,
+}: {
+  content: IContent[];
+  repository: Repository;
+}) => {
   const columns: GridColDef[] = [
-    { field: "id", headerName: "ID", width: 150 },
+    {
+      field: "id",
+      headerName: "ID",
+      width: 170,
+    },
+    {
+      field: "parent_id",
+      headerName: "Parent ID",
+      width: 200,
+      renderCell: (params) => (
+        <Link to={`/${repository.name}/content/${params.value}`}>
+          {params.value}
+        </Link>
+      ),
+    },
     {
       field: "name",
       headerName: "Name",

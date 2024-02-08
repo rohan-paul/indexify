@@ -16,7 +16,7 @@ export const MainListItems = ({
         <ListItemIcon>
           <DataObjectIcon />
         </ListItemIcon>
-        <ListItemText primary={"Namespace"} />
+        <ListItemText primary={"Home"} />
       </ListItemButton>
       <ListItemButton href={`/${currentNamespace}/extractors`}>
         <ListItemIcon>

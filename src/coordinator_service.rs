@@ -247,16 +247,26 @@ impl CoordinatorService for CoordinatorServiceServer {
         &self,
         _request: tonic::Request<ListExtractorsRequest>,
     ) -> Result<tonic::Response<ListExtractorsResponse>, tonic::Status> {
-        let extractors = self
+        let req = _request.into_inner();
+        let extractor_view = self
             .coordinator
-            .list_extractors()
+            .list_extractors(req.include_executors)
             .await
             .map_err(|e| tonic::Status::aborted(e.to_string()))?;
-        let extractors = extractors
+        let extractors = extractor_view
+            .extractors
             .into_iter()
             .map(|e| e.into())
             .collect::<Vec<indexify_coordinator::Extractor>>();
-        Ok(tonic::Response::new(ListExtractorsResponse { extractors }))
+        let executors = extractor_view
+            .executors
+            .into_iter()
+            .map(|e| e.into())
+            .collect::<Vec<indexify_coordinator::Executor>>();
+        Ok(tonic::Response::new(ListExtractorsResponse {
+            extractors,
+            executors,
+        }))
     }
 
     async fn register_executor(

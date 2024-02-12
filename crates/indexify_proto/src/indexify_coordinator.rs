@@ -212,12 +212,17 @@ pub struct Task {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ListExtractorsRequest {}
+pub struct ListExtractorsRequest {
+    #[prost(bool, tag = "1")]
+    pub include_executors: bool,
+}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListExtractorsResponse {
     #[prost(message, repeated, tag = "1")]
     pub extractors: ::prost::alloc::vec::Vec<Extractor>,
+    #[prost(message, repeated, tag = "2")]
+    pub executors: ::prost::alloc::vec::Vec<Executor>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -235,6 +240,14 @@ pub struct Extractor {
     >,
     #[prost(string, repeated, tag = "5")]
     pub input_mime_types: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Executor {
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub addr: ::prost::alloc::string::String,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

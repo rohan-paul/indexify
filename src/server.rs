@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 use anyhow::{anyhow, Result};
 use axum::{
@@ -677,7 +677,11 @@ async fn list_extractors(
         .map_err(|e| IndexifyAPIError::new(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .into_iter()
         .collect();
-    Ok(Json(ListExtractorsResponse { extractors }))
+    let executors = HashMap::new();
+    Ok(Json(ListExtractorsResponse {
+        extractors,
+        executors,
+    }))
 }
 
 #[utoipa::path(

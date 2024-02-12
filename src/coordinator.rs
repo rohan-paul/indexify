@@ -12,7 +12,11 @@ use jsonschema::JSONSchema;
 use tokio::sync::watch::Receiver;
 use tracing::info;
 
-use crate::{coordinator_filters::*, state::SharedState, task_allocator::TaskAllocator};
+use crate::{
+    coordinator_filters::*,
+    state::{ExtractorView, SharedState},
+    task_allocator::TaskAllocator,
+};
 
 pub struct Coordinator {
     shared_state: SharedState,
@@ -199,8 +203,8 @@ impl Coordinator {
         self.shared_state.namespace(namespace).await
     }
 
-    pub async fn list_extractors(&self) -> Result<Vec<internal_api::ExtractorDescription>> {
-        self.shared_state.list_extractors().await
+    pub async fn list_extractors(&self, include_executors: bool) -> Result<ExtractorView> {
+        self.shared_state.list_extractors(include_executors).await
     }
 
     pub async fn heartbeat(&self, executor_id: &str) -> Result<Vec<internal_api::Task>> {

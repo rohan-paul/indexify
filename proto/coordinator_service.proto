@@ -181,11 +181,12 @@ message Task {
 }
 
 message ListExtractorsRequest {
-
+    bool include_executors = 1;
 }
 
 message ListExtractorsResponse{
     repeated Extractor extractors = 1;
+    repeated Executor executors = 2;
 }
 
 message Extractor {
@@ -194,6 +195,11 @@ message Extractor {
     string input_params = 3;
     map<string, string> outputs = 4;
     repeated string input_mime_types = 5;
+}
+
+message Executor {
+    string id = 1;
+    string addr = 2;
 }
 
 message GetNamespaceRequest {

@@ -539,7 +539,9 @@ impl DataManager {
 
     #[tracing::instrument]
     pub async fn list_extractors(&self) -> Result<Vec<api::ExtractorDescription>> {
-        let req = indexify_coordinator::ListExtractorsRequest {};
+        let req = indexify_coordinator::ListExtractorsRequest {
+            include_executors: true,
+        };
         let response = self
             .coordinator_client
             .get()

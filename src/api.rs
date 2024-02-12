@@ -258,6 +258,7 @@ pub struct ListExecutorsResponse {
 #[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
 pub struct ListExtractorsResponse {
     pub extractors: Vec<ExtractorDescription>,
+    pub executors: HashMap<String, Vec<Executor>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, ToSchema)]

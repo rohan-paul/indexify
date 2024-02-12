@@ -73,6 +73,11 @@ pub type Raft = openraft::Raft<TypeConfig>;
 
 pub type SharedState = Arc<App>;
 
+pub struct ExtractorView {
+    pub extractors: Vec<internal_api::ExtractorDescription>,
+    pub executors: Vec<internal_api::ExecutorMetadata>,
+}
+
 pub mod typ {
     use openraft::BasicNode;
 
@@ -605,10 +610,19 @@ impl App {
         Ok(())
     }
 
-    pub async fn list_extractors(&self) -> Result<Vec<internal_api::ExtractorDescription>> {
+    pub async fn list_extractors(&self, include_executors: bool) -> Result<ExtractorView> {
         let store = self.indexify_state.read().await;
         let extractors = store.extractors.values().cloned().collect_vec();
-        Ok(extractors)
+        let mut executors = vec![];
+        println!("include_executors: {}", include_executors);
+        if include_executors {
+            executors.extend(store.executors.values().cloned());
+        }
+        println!("executors: {:?}", executors);
+        Ok(ExtractorView {
+            extractors,
+            executors,
+        })
     }
 
     pub async fn get_executors(&self) -> Result<Vec<internal_api::ExecutorMetadata>> {

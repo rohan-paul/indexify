@@ -415,6 +415,15 @@ pub struct ExecutorMetadata {
     pub extractor: ExtractorDescription,
 }
 
+impl From<ExecutorMetadata> for indexify_coordinator::Executor {
+    fn from(value: ExecutorMetadata) -> Self {
+        Self {
+            id: value.id,
+            addr: value.addr,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ExtractorHeartbeat {
     pub executor_id: String,

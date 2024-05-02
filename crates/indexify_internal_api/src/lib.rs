@@ -6,6 +6,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
+use derive_builder::Builder;
 use indexify_proto::indexify_coordinator::{self};
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,39 @@ use serde_with::{serde_as, BytesOrString};
 use smart_default::SmartDefault;
 use strum::{Display, EnumString};
 use utoipa::{schema, ToSchema};
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum IndexState {
+    Initialized,
+    Active,
+    Inactive,
+}
+
+impl Default for IndexState {
+    fn default() -> Self {
+        IndexState::Initialized
+    }
+}
+
+impl From<indexify_coordinator::IndexState> for IndexState {
+    fn from(value: indexify_coordinator::IndexState) -> Self {
+        match value {
+            indexify_coordinator::IndexState::IndexInitialized => IndexState::Initialized,
+            indexify_coordinator::IndexState::IndexActive => IndexState::Active,
+            indexify_coordinator::IndexState::IndexInactive => IndexState::Inactive,
+        }
+    }
+}
+
+impl From<IndexState> for indexify_coordinator::IndexState {
+    fn from(value: IndexState) -> Self {
+        match value {
+            IndexState::Initialized => indexify_coordinator::IndexState::IndexInitialized,
+            IndexState::Active => indexify_coordinator::IndexState::IndexActive,
+            IndexState::Inactive => indexify_coordinator::IndexState::IndexInactive,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, Deserialize, Default)]
 pub struct Index {
@@ -23,6 +57,7 @@ pub struct Index {
     pub schema: String,
     pub extraction_policy: String,
     pub extractor: String,
+    pub state: IndexState,
 }
 
 impl Index {
@@ -43,6 +78,7 @@ impl Hash for Index {
 
 impl From<Index> for indexify_coordinator::Index {
     fn from(value: Index) -> Self {
+        let state: indexify_coordinator::IndexState = value.state.into();
         Self {
             name: value.name,
             table_name: value.table_name,
@@ -50,6 +86,7 @@ impl From<Index> for indexify_coordinator::Index {
             extractor: value.extractor,
             extraction_policy: value.extraction_policy,
             namespace: value.namespace,
+            state: state as i32,
         }
     }
 }
@@ -63,6 +100,9 @@ impl From<indexify_coordinator::Index> for Index {
             extractor: value.extractor,
             extraction_policy: value.extraction_policy,
             namespace: value.namespace,
+            state: indexify_coordinator::IndexState::try_from(value.state)
+                .unwrap()
+                .into(),
         }
     }
 }
@@ -458,6 +498,41 @@ impl From<GarbageCollectionTask> for indexify_coordinator::GcTask {
     }
 }
 
+pub type ExtractionPolicyId = String;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Builder)]
+#[builder(build_fn(skip))]
+pub struct ExtractionGraph {
+    pub id: String,
+    pub namespace: String,
+    pub name: String,
+    pub extraction_policies: Vec<ExtractionPolicyId>,
+}
+
+impl ExtractionGraphBuilder {
+    pub fn build(&self) -> Result<ExtractionGraph> {
+        let name = self.name.clone().ok_or(anyhow!("name can't be empty"))?;
+        let namespace = self
+            .namespace
+            .clone()
+            .ok_or(anyhow!("namespace can't be empty"))?;
+        let extraction_policies = self
+            .extraction_policies
+            .clone()
+            .ok_or(anyhow!("child policies can't be empty"))?;
+        let id = self
+            .id
+            .clone()
+            .ok_or(anyhow!("extraction graph id can't be empty"))?;
+        Ok(ExtractionGraph {
+            id,
+            name,
+            namespace,
+            extraction_policies,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, Deserialize, Default)]
 pub struct ExtractionPolicy {
     pub id: String,
@@ -467,13 +542,8 @@ pub struct ExtractionPolicy {
     pub filters: HashMap<String, String>,
     pub input_params: serde_json::Value,
 
-    // Output name of the extractor to index name where the
-    // ouput is written to
-    pub output_index_name_mapping: HashMap<String, String>,
-
-    // Index name to the underlying table name of the index
-    // in storage system
-    pub index_name_table_mapping: HashMap<String, String>,
+    // Extractor Output -> Index Table Mapping
+    pub output_index_table_mapping: HashMap<String, String>,
 
     // The source of the content - ingestion, name of some extractor binding
     // which produces the content by invoking an extractor

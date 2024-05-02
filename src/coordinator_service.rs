@@ -65,6 +65,8 @@ use indexify_proto::indexify_coordinator::{
     TombstoneContentRequest,
     TombstoneContentResponse,
     Uint64List,
+    UpdateIndexRequest,
+    UpdateIndexResponse,
     UpdateTaskRequest,
     UpdateTaskResponse,
 };
@@ -107,6 +109,13 @@ pub struct CoordinatorServiceServer {
 impl CoordinatorService for CoordinatorServiceServer {
     type GCTasksStreamStream = GCTasksResponseStream;
     type HeartbeatStream = HBResponseStream;
+
+    async fn update_index(
+        &self,
+        req: tonic::Request<UpdateIndexRequest>,
+    ) -> Result<tonic::Response<UpdateIndexResponse>, tonic::Status> {
+        Ok(tonic::Response::new(UpdateIndexResponse {}))
+    }
 
     async fn create_content(
         &self,
@@ -175,17 +184,15 @@ impl CoordinatorService for CoordinatorServiceServer {
             .get_extractor(&request.extractor)
             .await
             .map_err(|e| tonic::Status::aborted(e.to_string()))?;
-        let mut index_name_table_mapping = HashMap::new();
-        let mut output_index_name_mapping = HashMap::new();
+
+        let mut output_index_table_mapping = HashMap::new();
 
         //  TODO: Just create an output to table mapping here directly instead of 2
         // separate mappings
         for output_name in extractor.outputs.keys() {
-            let index_name = format!("{}.{}", request.name, output_name);
             let index_table_name =
                 format!("{}.{}.{}", request.namespace, request.name, output_name);
-            index_name_table_mapping.insert(index_name.clone(), index_table_name.clone());
-            output_index_name_mapping.insert(output_name.clone(), index_name.clone());
+            output_index_table_mapping.insert(output_name.clone(), index_table_name.clone());
         }
 
         let extraction_policy = internal_api::ExtractionPolicy {
@@ -195,8 +202,7 @@ impl CoordinatorService for CoordinatorServiceServer {
             namespace: request.namespace,
             filters: request.filters,
             input_params,
-            output_index_name_mapping: output_index_name_mapping.clone(),
-            index_name_table_mapping: index_name_table_mapping.clone(),
+            output_index_table_mapping: output_index_table_mapping.clone(),
             content_source: request.content_source,
         };
         let _ = self
@@ -208,8 +214,7 @@ impl CoordinatorService for CoordinatorServiceServer {
             created_at: timestamp_secs() as i64,
             extractor: Some(extractor.into()),
             extraction_policy: Some(extraction_policy.into()),
-            index_name_table_mapping,
-            output_index_name_mapping,
+            output_index_table_mapping,
         }))
     }
 

@@ -42,6 +42,8 @@ service CoordinatorService {
 
     rpc GetIndex(GetIndexRequest) returns (GetIndexResponse) {}
 
+    rpc UpdateIndex(UpdateIndexRequest) returns (UpdateIndexResponse) {}
+
     rpc CreateIndex(CreateIndexRequest) returns (CreateIndexResponse) {}
 
     rpc GetExtractorCoordinates(GetExtractorCoordinatesRequest) returns (GetExtractorCoordinatesResponse) {}
@@ -151,6 +153,21 @@ message CreateIndexRequest {
 message CreateIndexResponse {
 }
 
+message UpdateIndexRequest {
+    string namespace = 1;
+    string name = 2;
+    IndexState state = 3;
+}
+
+message UpdateIndexResponse {
+}
+
+enum IndexState {
+    INDEX_INITIALIZED = 0;
+    INDEX_ACTIVE = 1;
+    INDEX_INACTIVE = 2;
+}
+
 message Index {
     string name = 1;
     string namespace = 2;
@@ -158,6 +175,7 @@ message Index {
     string schema = 4;
     string extraction_policy = 5;
     string extractor = 6;
+    IndexState state = 7;
 }
 
 message Embedding {
@@ -341,8 +359,7 @@ message ExtractionPolicyResponse {
     int64 created_at = 1;
     Extractor extractor = 2;
     ExtractionPolicy extraction_policy = 3;
-    map<string, string> index_name_table_mapping = 4;
-    map<string, string> output_index_name_mapping = 5;
+    map<string, string> output_index_table_mapping = 4;
 }
 
 message ContentMetadata {

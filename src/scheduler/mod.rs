@@ -80,8 +80,10 @@ impl Scheduler {
                 .await?;
             for (name, schema) in &extractor.outputs {
                 if let OutputSchema::Embedding(_) = schema {
-                    let index_name = policy.output_index_name_mapping.get(name).unwrap();
-                    let table_name = policy.index_name_table_mapping.get(index_name).unwrap();
+                    let table_name = policy
+                        .output_index_table_mapping
+                        .get(name)
+                        .ok_or_else(|| anyhow!("table name not found for output: {}", name))?;
                     tables.push(table_name.clone());
                     continue;
                 }
@@ -205,14 +207,10 @@ impl Scheduler {
 
         // Just store the mapping
         for name in extractor.outputs.keys() {
-            let index_name = extraction_policy
-                .output_index_name_mapping
-                .get(name)
-                .unwrap();
             let table_name = extraction_policy
-                .index_name_table_mapping
-                .get(index_name)
-                .unwrap();
+                .output_index_table_mapping
+                .get(name)
+                .ok_or(anyhow!("table name not found for output: {}", name))?;
             output_mapping.insert(name.clone(), table_name.clone());
         }
         let mut hasher = DefaultHasher::new();

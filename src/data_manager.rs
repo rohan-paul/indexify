@@ -164,62 +164,22 @@ impl DataManager {
             .create_extraction_policy(req)
             .await?
             .into_inner();
-        let mut index_names = Vec::new();
         let extractor = response
             .extractor
             .ok_or(anyhow!("extractor {:?} not found", ep_req.extractor))?;
         for (name, output_schema) in &extractor.embedding_schemas {
             let embedding_schema: internal_api::EmbeddingSchema =
                 serde_json::from_str(output_schema)?;
-            let index_name = response.output_index_name_mapping.get(name).unwrap();
-            let table_name = response.index_name_table_mapping.get(index_name).unwrap();
-            index_names.push(index_name.clone());
-            let schema_json = serde_json::to_value(&embedding_schema)?;
+            let table_name = response.output_index_table_mapping.get(name).unwrap();
             let _ = self
                 .vector_index_manager
                 .create_index(table_name, embedding_schema.clone())
                 .await?;
-            self.create_index_metadata(
-                namespace,
-                index_name,
-                table_name,
-                schema_json,
-                &ep_req.name,
-                &extractor.name,
-            )
-            .await?;
+
+            // TODO: Update Index visibility here
         }
 
-        Ok(index_names)
-    }
-
-    async fn create_index_metadata(
-        &self,
-        namespace: &str,
-        index_name: &str,
-        table_name: &str,
-        schema: serde_json::Value,
-        extraction_policy: &str,
-        extractor: &str,
-    ) -> Result<()> {
-        let index = indexify_coordinator::CreateIndexRequest {
-            index: Some(indexify_coordinator::Index {
-                name: index_name.to_string(),
-                table_name: table_name.to_string(),
-                namespace: namespace.to_string(),
-                schema: serde_json::to_value(schema).unwrap().to_string(),
-                extraction_policy: extraction_policy.to_string(),
-                extractor: extractor.to_string(),
-            }),
-        };
-        let req = GrpcHelper::into_req(index);
-        let _resp = self
-            .coordinator_client
-            .get()
-            .await?
-            .create_index(req)
-            .await?;
-        Ok(())
+        Ok(vec![])
     }
 
     pub async fn list_content(

@@ -3408,6 +3408,7 @@ dependencies = [
  "anyhow",
  "derive_builder",
  "indexify_proto",
+ "jsonschema",
  "mime",
  "nanoid",
  "serde",

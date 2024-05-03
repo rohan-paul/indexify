@@ -10,67 +10,15 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use axum::{extract::State, routing::get};
+use axum::{extract::{self, State}, routing::get};
 use futures::StreamExt;
 use hyper::StatusCode;
 use indexify_internal_api as internal_api;
 use indexify_proto::indexify_coordinator::{
-    self,
-    coordinator_service_server::CoordinatorService,
-    CoordinatorCommand,
-    CreateContentRequest,
-    CreateContentResponse,
-    CreateGcTasksRequest,
-    CreateGcTasksResponse,
-    CreateIndexRequest,
-    CreateIndexResponse,
-    ExtractionPolicyRequest,
-    ExtractionPolicyResponse,
-    GcTask,
-    GcTaskAcknowledgement,
-    GetAllSchemaRequest,
-    GetAllSchemaResponse,
-    GetAllTaskAssignmentRequest,
-    GetContentMetadataRequest,
-    GetContentTreeMetadataRequest,
-    GetExtractorCoordinatesRequest,
-    GetIndexRequest,
-    GetIndexResponse,
-    GetRaftMetricsSnapshotRequest,
-    GetSchemaRequest,
-    GetSchemaResponse,
-    GetTaskRequest,
-    GetTaskResponse,
-    HeartbeatRequest,
-    HeartbeatResponse,
-    ListContentRequest,
-    ListContentResponse,
-    ListExtractionPoliciesRequest,
-    ListExtractionPoliciesResponse,
-    ListExtractorsRequest,
-    ListExtractorsResponse,
-    ListIndexesRequest,
-    ListIndexesResponse,
-    ListStateChangesRequest,
-    ListTasksRequest,
-    ListTasksResponse,
-    RaftMetricsSnapshotResponse,
-    RegisterExecutorRequest,
-    RegisterExecutorResponse,
-    RegisterIngestionServerRequest,
-    RegisterIngestionServerResponse,
-    RemoveIngestionServerRequest,
-    RemoveIngestionServerResponse,
-    TaskAssignments,
-    TombstoneContentRequest,
-    TombstoneContentResponse,
-    Uint64List,
-    UpdateIndexRequest,
-    UpdateIndexResponse,
-    UpdateTaskRequest,
-    UpdateTaskResponse,
+    self, coordinator_service_server::CoordinatorService, CoordinatorCommand, CreateContentRequest, CreateContentResponse, CreateExtractionGraphRequest, CreateExtractionGraphResponse, CreateGcTasksRequest, CreateGcTasksResponse, CreateIndexRequest, CreateIndexResponse, ExtractionPolicyRequest, ExtractionPolicyResponse, GcTask, GcTaskAcknowledgement, GetAllSchemaRequest, GetAllSchemaResponse, GetAllTaskAssignmentRequest, GetContentMetadataRequest, GetContentTreeMetadataRequest, GetExtractorCoordinatesRequest, GetIndexRequest, GetIndexResponse, GetRaftMetricsSnapshotRequest, GetSchemaRequest, GetSchemaResponse, GetTaskRequest, GetTaskResponse, HeartbeatRequest, HeartbeatResponse, ListContentRequest, ListContentResponse, ListExtractionGraphsRequest, ListExtractionGraphsResponse, ListExtractionPoliciesRequest, ListExtractionPoliciesResponse, ListExtractorsRequest, ListExtractorsResponse, ListIndexesRequest, ListIndexesResponse, ListStateChangesRequest, ListTasksRequest, ListTasksResponse, RaftMetricsSnapshotResponse, RegisterExecutorRequest, RegisterExecutorResponse, RegisterIngestionServerRequest, RegisterIngestionServerResponse, RemoveIngestionServerRequest, RemoveIngestionServerResponse, TaskAssignments, TombstoneContentRequest, TombstoneContentResponse, Uint64List, UpdateIndexRequest, UpdateIndexResponse, UpdateTaskRequest, UpdateTaskResponse
 };
-use internal_api::StateChange;
+use internal_api::{ExtractionGraph, ExtractionGraphBuilder, ExtractionPolicy, ExtractionPolicyBuilder, ExtractorDescription, StateChange};
+use moka::policy;
 use prometheus::Encoder;
 use tokio::{
     select,
@@ -100,9 +48,54 @@ type HBResponseStream = Pin<Box<dyn Stream<Item = Result<HeartbeatResponse, Stat
 type GCTasksResponseStream =
     Pin<Box<dyn tokio_stream::Stream<Item = Result<CoordinatorCommand, Status>> + Send + Sync>>;
 
+struct ExtractionPolicyCreationResult {
+    extraction_policies: HashMap<String, ExtractionPolicy>,
+    extractors: HashMap<String, ExtractorDescription>,
+}
 pub struct CoordinatorServiceServer {
     coordinator: Arc<Coordinator>,
     shutdown_rx: Receiver<()>,
+}
+
+impl CoordinatorServiceServer {
+    async fn create_extraction_policies_for_graph(
+        &self,
+        extraction_graph: &CreateExtractionGraphRequest,
+    ) -> Result<ExtractionPolicyCreationResult> {
+        let mut name_to_policy_mapping = HashMap::new();
+        let mut parent_child_policy_mapping = HashMap::new();
+        let graph_id =
+            ExtractionGraph::create_id(&extraction_graph.namespace, &extraction_graph.name);
+        let mut extraction_policies = HashMap::new();
+        let mut extractors = HashMap::new();
+
+        for policy_request in &extraction_graph.policies {
+            let content_source = if policy_request.content_source.is_empty() {
+                None
+            } else {
+                Some(internal_api::ExtractionPolicyId(policy_request.content_source.clone()))
+            };
+            let input_params = serde_json::from_str(&policy_request.input_params)
+                .map_err(|e| anyhow!(format!("unable to parse input_params: {}", e)))?;
+            let policy_id = ExtractionPolicy::create_id(&graph_id, &policy_request.name);
+            let extractor = self.coordinator.get_extractor(&policy_request.extractor).await?;
+            let policy = ExtractionPolicyBuilder::default()
+                .namespace(policy_request.namespace)
+                .name(policy_request.name)
+                .extractor(policy_request.extractor)
+                .filters(policy_request.filters)
+                .input_params(input_params)
+                .content_source(content_source)
+                .build(&graph_id, &extraction_graph.name, extractor.clone())
+                .map_err(|e| anyhow!(e))?;
+            extraction_policies.insert(policy_request.name.clone(), policy.clone());
+            extractors.insert(policy_request.extractor.clone(), extractor.clone());
+        }
+        Ok(ExtractionPolicyCreationResult {
+            extraction_policies,
+            extractors,
+        })
+    }
 }
 
 #[tonic::async_trait]
@@ -167,75 +160,68 @@ impl CoordinatorService for CoordinatorServiceServer {
         }))
     }
 
-    async fn create_extraction_policy(
+    async fn create_extraction_graph(
         &self,
-        request: tonic::Request<ExtractionPolicyRequest>,
-    ) -> Result<tonic::Response<ExtractionPolicyResponse>, tonic::Status> {
+        request: tonic::Request<CreateExtractionGraphRequest>,
+    ) -> Result<tonic::Response<CreateExtractionGraphResponse>, tonic::Status> {
         let request = request.into_inner();
-        let mut s = DefaultHasher::new();
-        request.namespace.hash(&mut s);
-        request.name.hash(&mut s);
-        let id = s.finish().to_string();
-        let input_params = serde_json::from_str(&request.input_params)
-            .map_err(|e| tonic::Status::aborted(format!("unable to parse input_params: {}", e)))?;
-
-        let extractor = self
+        let extraction_policy_create_result= self
+            .create_extraction_policies_for_graph(&request)
+            .await
+            .map_err(|e| {
+                tonic::Status::aborted(format!("unable to create extraction policies: {}", e))
+            })?;
+        let policy_ids = extraction_policy_create_result
+        .extraction_policies
+            .iter()
+            .map(|ep| ep.id.clone())
+            .collect();
+        let graph = ExtractionGraphBuilder::default()
+            .namespace(request.namespace.clone())
+            .name(request.name.clone())
+            .extraction_policies(policy_ids)
+            .build()
+            .map_err(|e| tonic::Status::aborted(e.to_string()))?;
+        let indexes = self
             .coordinator
-            .get_extractor(&request.extractor)
+            .create_extraction_graph(graph.clone(), creation_result.extraction_policies.clone())
             .await
             .map_err(|e| tonic::Status::aborted(e.to_string()))?;
-
-        let mut output_index_table_mapping = HashMap::new();
-
-        //  TODO: Just create an output to table mapping here directly instead of 2
-        // separate mappings
-        for output_name in extractor.outputs.keys() {
-            let index_table_name =
-                format!("{}.{}.{}", request.namespace, request.name, output_name);
-            output_index_table_mapping.insert(output_name.clone(), index_table_name.clone());
-        }
-
-        let extraction_policy = internal_api::ExtractionPolicy {
-            id,
-            extractor: request.extractor,
-            name: request.name,
-            namespace: request.namespace,
-            filters: request.filters,
-            input_params,
-            output_index_table_mapping: output_index_table_mapping.clone(),
-            content_source: request.content_source,
-        };
-        let _ = self
+        let policies: HashMap<_, _> = self
             .coordinator
-            .create_policy(extraction_policy.clone(), extractor.clone())
-            .await
-            .map_err(|e| tonic::Status::aborted(e.to_string()))?;
-        Ok(tonic::Response::new(ExtractionPolicyResponse {
-            created_at: timestamp_secs() as i64,
-            extractor: Some(extractor.into()),
-            extraction_policy: Some(extraction_policy.into()),
-            output_index_table_mapping,
+            .internal_extraction_policy_to_external(creation_result.extraction_policies.clone())
+            .map_err(|e| tonic::Status::aborted(format!("unable to convert policies: {}", e)))?
+            .into_iter()
+            .map(|policy| (policy.id.clone(), policy.clone()))
+            .collect();
+        let extractors: HashMap<_, _> = creation_result
+            .extractors
+            .iter()
+            .map(|extractor| (extractor.name.clone(), extractor.clone().into()))
+            .collect();
+        let extractor_output_table_mapping: HashMap<_, _> = creation_result
+            .extraction_policies
+            .iter()
+            .flat_map(|policy| policy.output_table_mapping.clone())
+            .collect();
+        let indexes = indexes
+            .into_iter()
+            .map(|index| index.into())
+            .collect::<Vec<indexify_coordinator::Index>>();
+        Ok(tonic::Response::new(CreateExtractionGraphResponse {
+            graph_id: graph.id,
+            extractors,
+            policies,
+            indexes,
+            extractor_output_table_mapping,
         }))
     }
 
-    async fn list_extraction_policies(
+    async fn list_extraction_graphs(
         &self,
-        request: tonic::Request<ListExtractionPoliciesRequest>,
-    ) -> Result<tonic::Response<ListExtractionPoliciesResponse>, tonic::Status> {
-        let request = request.into_inner();
-        let extraction_policies = self
-            .coordinator
-            .list_policies(&request.namespace)
-            .await
-            .map_err(|e| tonic::Status::aborted(e.to_string()))?;
-        let policies = extraction_policies
-            .into_iter()
-            .map(|b| b.into())
-            .collect::<Vec<indexify_coordinator::ExtractionPolicy>>();
-
-        Ok(tonic::Response::new(ListExtractionPoliciesResponse {
-            policies,
-        }))
+        _request: tonic::Request<ListExtractionGraphsRequest>,
+    ) -> Result<tonic::Response<ListExtractionGraphsResponse>, tonic::Status> {
+        Ok(tonic::Response::new(ListExtractionGraphsResponse{}))
     }
 
     async fn create_ns(

@@ -370,6 +370,18 @@ pub struct ListContentResponse {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListExtractionGraphsRequest {
+    #[prost(string, tag = "1")]
+    pub namespace: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListExtractionGraphsResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub graphs: ::prost::alloc::vec::Vec<ExtractionGraph>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListExtractionPoliciesRequest {
     #[prost(string, tag = "1")]
     pub namespace: ::prost::alloc::string::String,
@@ -404,6 +416,49 @@ pub struct ListNamespaceRequest {}
 pub struct ListNamespaceResponse {
     #[prost(message, repeated, tag = "1")]
     pub namespaces: ::prost::alloc::vec::Vec<Namespace>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CreateExtractionGraphRequest {
+    #[prost(string, tag = "1")]
+    pub namespace: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag = "3")]
+    pub policies: ::prost::alloc::vec::Vec<ExtractionPolicyRequest>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CreateExtractionGraphResponse {
+    #[prost(string, tag = "1")]
+    pub graph_id: ::prost::alloc::string::String,
+    #[prost(map = "string, message", tag = "2")]
+    pub extractors: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        Extractor,
+    >,
+    #[prost(map = "string, message", tag = "3")]
+    pub policies: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ExtractionPolicy,
+    >,
+    #[prost(map = "string, string", tag = "4")]
+    pub extractor_output_table_mapping: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
+    #[prost(message, repeated, tag = "5")]
+    pub indexes: ::prost::alloc::vec::Vec<Index>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ExtractionGraph {
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag = "3")]
+    pub policies: ::prost::alloc::vec::Vec<ExtractionPolicy>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -963,11 +1018,11 @@ pub mod coordinator_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
-        pub async fn create_extraction_policy(
+        pub async fn create_extraction_graph(
             &mut self,
-            request: impl tonic::IntoRequest<super::ExtractionPolicyRequest>,
+            request: impl tonic::IntoRequest<super::CreateExtractionGraphRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::ExtractionPolicyResponse>,
+            tonic::Response<super::CreateExtractionGraphResponse>,
             tonic::Status,
         > {
             self.inner
@@ -981,23 +1036,23 @@ pub mod coordinator_service_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/indexify_coordinator.CoordinatorService/CreateExtractionPolicy",
+                "/indexify_coordinator.CoordinatorService/CreateExtractionGraph",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
                         "indexify_coordinator.CoordinatorService",
-                        "CreateExtractionPolicy",
+                        "CreateExtractionGraph",
                     ),
                 );
             self.inner.unary(req, path, codec).await
         }
-        pub async fn list_extraction_policies(
+        pub async fn list_extraction_graphs(
             &mut self,
-            request: impl tonic::IntoRequest<super::ListExtractionPoliciesRequest>,
+            request: impl tonic::IntoRequest<super::ListExtractionGraphsRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::ListExtractionPoliciesResponse>,
+            tonic::Response<super::ListExtractionGraphsResponse>,
             tonic::Status,
         > {
             self.inner
@@ -1011,14 +1066,14 @@ pub mod coordinator_service_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/indexify_coordinator.CoordinatorService/ListExtractionPolicies",
+                "/indexify_coordinator.CoordinatorService/ListExtractionGraphs",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
                         "indexify_coordinator.CoordinatorService",
-                        "ListExtractionPolicies",
+                        "ListExtractionGraphs",
                     ),
                 );
             self.inner.unary(req, path, codec).await
@@ -1750,18 +1805,18 @@ pub mod coordinator_service_server {
             tonic::Response<super::ListContentResponse>,
             tonic::Status,
         >;
-        async fn create_extraction_policy(
+        async fn create_extraction_graph(
             &self,
-            request: tonic::Request<super::ExtractionPolicyRequest>,
+            request: tonic::Request<super::CreateExtractionGraphRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::ExtractionPolicyResponse>,
+            tonic::Response<super::CreateExtractionGraphResponse>,
             tonic::Status,
         >;
-        async fn list_extraction_policies(
+        async fn list_extraction_graphs(
             &self,
-            request: tonic::Request<super::ListExtractionPoliciesRequest>,
+            request: tonic::Request<super::ListExtractionGraphsRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::ListExtractionPoliciesResponse>,
+            tonic::Response<super::ListExtractionGraphsResponse>,
             tonic::Status,
         >;
         async fn create_ns(
@@ -2252,25 +2307,25 @@ pub mod coordinator_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/indexify_coordinator.CoordinatorService/CreateExtractionPolicy" => {
+                "/indexify_coordinator.CoordinatorService/CreateExtractionGraph" => {
                     #[allow(non_camel_case_types)]
-                    struct CreateExtractionPolicySvc<T: CoordinatorService>(pub Arc<T>);
+                    struct CreateExtractionGraphSvc<T: CoordinatorService>(pub Arc<T>);
                     impl<
                         T: CoordinatorService,
-                    > tonic::server::UnaryService<super::ExtractionPolicyRequest>
-                    for CreateExtractionPolicySvc<T> {
-                        type Response = super::ExtractionPolicyResponse;
+                    > tonic::server::UnaryService<super::CreateExtractionGraphRequest>
+                    for CreateExtractionGraphSvc<T> {
+                        type Response = super::CreateExtractionGraphResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::ExtractionPolicyRequest>,
+                            request: tonic::Request<super::CreateExtractionGraphRequest>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as CoordinatorService>::create_extraction_policy(
+                                <T as CoordinatorService>::create_extraction_graph(
                                         &inner,
                                         request,
                                     )
@@ -2286,7 +2341,7 @@ pub mod coordinator_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = CreateExtractionPolicySvc(inner);
+                        let method = CreateExtractionGraphSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
@@ -2302,25 +2357,25 @@ pub mod coordinator_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/indexify_coordinator.CoordinatorService/ListExtractionPolicies" => {
+                "/indexify_coordinator.CoordinatorService/ListExtractionGraphs" => {
                     #[allow(non_camel_case_types)]
-                    struct ListExtractionPoliciesSvc<T: CoordinatorService>(pub Arc<T>);
+                    struct ListExtractionGraphsSvc<T: CoordinatorService>(pub Arc<T>);
                     impl<
                         T: CoordinatorService,
-                    > tonic::server::UnaryService<super::ListExtractionPoliciesRequest>
-                    for ListExtractionPoliciesSvc<T> {
-                        type Response = super::ListExtractionPoliciesResponse;
+                    > tonic::server::UnaryService<super::ListExtractionGraphsRequest>
+                    for ListExtractionGraphsSvc<T> {
+                        type Response = super::ListExtractionGraphsResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::ListExtractionPoliciesRequest>,
+                            request: tonic::Request<super::ListExtractionGraphsRequest>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as CoordinatorService>::list_extraction_policies(
+                                <T as CoordinatorService>::list_extraction_graphs(
                                         &inner,
                                         request,
                                     )
@@ -2336,7 +2391,7 @@ pub mod coordinator_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = ListExtractionPoliciesSvc(inner);
+                        let method = ListExtractionGraphsSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

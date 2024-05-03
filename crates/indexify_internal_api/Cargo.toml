@@ -12,6 +12,7 @@ anyhow = { workspace = true }
 derive_builder = { workspace = true }
 nanoid = { workspace = true }
 indexify_proto = { workspace = true }
+jsonschema = { workspace = true }
 mime = { workspace = true }
 serde = { workspace = true }
 serde_with = { workspace = true }

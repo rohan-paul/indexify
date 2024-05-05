@@ -7,7 +7,13 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use indexify_internal_api as internal_api;
-use internal_api::{ContentMetadataId, ExtractorDescription, StateChange, TaskOutcome};
+use internal_api::{
+    ContentMetadata,
+    ContentMetadataId,
+    ExtractorDescription,
+    StateChange,
+    TaskOutcome,
+};
 use itertools::Itertools;
 use rocksdb::OptimisticTransactionDB;
 use serde::de::DeserializeOwned;
@@ -871,7 +877,7 @@ impl IndexifyState {
         &self,
         db: &Arc<OptimisticTransactionDB>,
         txn: &rocksdb::Transaction<OptimisticTransactionDB>,
-        contents_vec: &Vec<internal_api::ContentMetadata>,
+        contents_vec: &Vec<ContentMetadata>,
     ) -> Result<(), StateMachineError> {
         for content in contents_vec {
             let content_key = format!("{}::v{}", content.id.id, content.id.version);
@@ -892,7 +898,7 @@ impl IndexifyState {
         &self,
         db: &Arc<OptimisticTransactionDB>,
         txn: &rocksdb::Transaction<OptimisticTransactionDB>,
-        content_metadata: &Vec<indexify_internal_api::ContentMetadata>,
+        content_metadata: &Vec<ContentMetadata>,
     ) -> Result<(), StateMachineError> {
         for content in content_metadata {
             let content_key = format!("{}::v{}", content.id.id, content.id.version);
@@ -1078,7 +1084,7 @@ impl IndexifyState {
                     content_id
                 ))
             })?;
-        let mut content_meta = JsonEncoder::decode::<internal_api::ContentMetadata>(&value)?;
+        let mut content_meta = JsonEncoder::decode::<ContentMetadata>(&value)?;
         let epoch_time = policy_completion_time
             .duration_since(SystemTime::UNIX_EPOCH)
             .map_err(|e| {
@@ -1491,7 +1497,7 @@ impl IndexifyState {
         content_id: &str,
         db: &Arc<OptimisticTransactionDB>,
         txn: &rocksdb::Transaction<OptimisticTransactionDB>,
-    ) -> Result<Option<u64>, StateMachineError> {
+    ) -> Result<Option<ContentMetadata>, StateMachineError> {
         let prefix = format!("{}::v", content_id);
 
         let mut read_opts = rocksdb::ReadOptions::default();
@@ -1501,22 +1507,23 @@ impl IndexifyState {
             rocksdb::IteratorMode::From(prefix.as_bytes(), rocksdb::Direction::Forward),
         );
 
-        let mut highest_version: Option<u64> = None;
+        let mut highest_version_content: Option<ContentMetadata> = None;
 
         for item in iter {
             match item {
                 Ok((key, value)) => {
-                    let content_metadata =
-                        JsonEncoder::decode::<indexify_internal_api::ContentMetadata>(&value)?;
+                    let content_metadata = JsonEncoder::decode::<ContentMetadata>(&value)?;
                     if content_metadata.tombstoned {
                         continue;
                     }
                     if let Ok(key_str) = std::str::from_utf8(&key) {
                         if let Some(version_str) = key_str.strip_prefix(&prefix) {
                             if let Ok(version) = version_str.parse::<u64>() {
-                                highest_version = Some(match highest_version {
-                                    Some(current_high) if version > current_high => version,
-                                    None => version,
+                                highest_version_content = Some(match highest_version_content {
+                                    Some(current_high) if version > current_high.id.version => {
+                                        content_metadata
+                                    }
+                                    None => content_metadata,
                                     Some(current_high) => current_high,
                                 });
                             }
@@ -1527,7 +1534,7 @@ impl IndexifyState {
             }
         }
 
-        Ok(highest_version)
+        Ok(highest_version_content)
     }
 
     /// This method fetches a key from a specific column family
@@ -1654,21 +1661,18 @@ impl IndexifyState {
         &self,
         content_ids: HashSet<ContentMetadataId>,
         db: &Arc<OptimisticTransactionDB>,
-    ) -> Result<Vec<indexify_internal_api::ContentMetadata>, StateMachineError> {
+    ) -> Result<Vec<ContentMetadata>, StateMachineError> {
         let txn = db.transaction();
 
-        let content: Result<Vec<indexify_internal_api::ContentMetadata>, StateMachineError> =
-            content_ids
-                .into_iter()
-                .filter_map(|content_id| {
-                    match txn.get_cf(
-                        StateMachineColumns::ContentTable.cf(db),
-                        format!("{}::v{}", content_id.id, content_id.version),
-                    ) {
-                        Ok(Some(content_bytes)) => match JsonEncoder::decode::<
-                            indexify_internal_api::ContentMetadata,
-                        >(&content_bytes)
-                        {
+        let content: Result<Vec<ContentMetadata>, StateMachineError> = content_ids
+            .into_iter()
+            .filter_map(|content_id| {
+                match txn.get_cf(
+                    StateMachineColumns::ContentTable.cf(db),
+                    format!("{}::v{}", content_id.id, content_id.version),
+                ) {
+                    Ok(Some(content_bytes)) => {
+                        match JsonEncoder::decode::<ContentMetadata>(&content_bytes) {
                             Ok(content) => {
                                 if !content.tombstoned {
                                     Some(Ok(content))
@@ -1677,12 +1681,13 @@ impl IndexifyState {
                                 }
                             }
                             Err(e) => Some(Err(StateMachineError::TransactionError(e.to_string()))),
-                        },
-                        Ok(None) => None,
-                        Err(e) => Some(Err(StateMachineError::TransactionError(e.to_string()))),
+                        }
                     }
-                })
-                .collect::<Result<Vec<_>, _>>();
+                    Ok(None) => None,
+                    Err(e) => Some(Err(StateMachineError::TransactionError(e.to_string()))),
+                }
+            })
+            .collect::<Result<Vec<_>, _>>();
         content
     }
 
@@ -1694,7 +1699,7 @@ impl IndexifyState {
         &self,
         content_ids: HashSet<String>,
         db: &Arc<OptimisticTransactionDB>,
-    ) -> Result<Vec<indexify_internal_api::ContentMetadata>, StateMachineError> {
+    ) -> Result<Vec<ContentMetadata>, StateMachineError> {
         let txn = db.transaction();
         let mut contents = Vec::new();
 
@@ -1709,27 +1714,7 @@ impl IndexifyState {
             // If a key with the highest version is found, decode its content and add to the
             // results
             let highest_version = highest_version.unwrap();
-            match txn.get_cf(
-                StateMachineColumns::ContentTable.cf(db),
-                &format!("{}::v{}", content_id, highest_version),
-            ) {
-                Ok(Some(content_bytes)) => {
-                    match JsonEncoder::decode::<indexify_internal_api::ContentMetadata>(
-                        &content_bytes,
-                    ) {
-                        Ok(content) => {
-                            if !content.tombstoned {
-                                contents.push(content);
-                            }
-                        }
-                        Err(e) => {
-                            return Err(StateMachineError::TransactionError(e.to_string()));
-                        }
-                    }
-                }
-                Ok(None) => {} // This should technically never happen since we have the key
-                Err(e) => return Err(StateMachineError::TransactionError(e.to_string())),
-            }
+            contents.push(highest_version);
         }
 
         Ok(contents)
@@ -1741,7 +1726,7 @@ impl IndexifyState {
         &self,
         content_id: &str,
         db: &Arc<OptimisticTransactionDB>,
-    ) -> Result<Vec<indexify_internal_api::ContentMetadata>, StateMachineError> {
+    ) -> Result<Vec<ContentMetadata>, StateMachineError> {
         let txn = db.transaction();
         let mut collected_content_metadata = Vec::new();
 
@@ -1757,7 +1742,7 @@ impl IndexifyState {
             let content_bytes = txn
                 .get_cf(
                     StateMachineColumns::ContentTable.cf(db),
-                    &format!("{}::v{}", current_root, highest_version),
+                    &format!("{}::v{}", current_root, highest_version.id.version),
                 )
                 .map_err(|e| StateMachineError::TransactionError(e.to_string()))?
                 .ok_or_else(|| {
@@ -1766,8 +1751,7 @@ impl IndexifyState {
                         &current_root
                     ))
                 })?;
-            let content =
-                JsonEncoder::decode::<indexify_internal_api::ContentMetadata>(&content_bytes)?;
+            let content = JsonEncoder::decode::<ContentMetadata>(&content_bytes)?;
             collected_content_metadata.push(content.clone());
             let children = self.content_children_table.get_children(&content.id);
             queue.extend(children.into_iter().map(|id| id.id));
@@ -1781,7 +1765,7 @@ impl IndexifyState {
         &self,
         content_id: &ContentMetadataId,
         db: &Arc<OptimisticTransactionDB>,
-    ) -> Result<Vec<indexify_internal_api::ContentMetadata>, StateMachineError> {
+    ) -> Result<Vec<ContentMetadata>, StateMachineError> {
         let txn = db.transaction();
         let mut collected_content_metadata = Vec::new();
 
@@ -1801,8 +1785,7 @@ impl IndexifyState {
                         &current_root
                     ))
                 })?;
-            let content =
-                JsonEncoder::decode::<indexify_internal_api::ContentMetadata>(&content_bytes)?;
+            let content = JsonEncoder::decode::<ContentMetadata>(&content_bytes)?;
             collected_content_metadata.push(content.clone());
             let children = self.content_children_table.get_children(&content.id);
             queue.extend(children.into_iter());

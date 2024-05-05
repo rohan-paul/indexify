@@ -968,7 +968,7 @@ impl App {
             let latest_version_of_parent = latest_version_of_parent.unwrap();
 
             //  if the latest version of the parent is the first version, create the content
-            if latest_version_of_parent == 1 {
+            if latest_version_of_parent.id.version == 1 {
                 new_content.push(incoming_content);
                 continue;
             }
@@ -977,7 +977,7 @@ impl App {
             // content
             let parent_prev_version_id = ContentMetadataId::new_with_version(
                 &incoming_content.parent_id.id,
-                latest_version_of_parent - 1,
+                latest_version_of_parent.id.version - 1,
             );
             let parent_prev_version_tree = self
                 .state_machine
@@ -993,7 +993,7 @@ impl App {
                 let mut content = incoming_content.clone();
                 content.parent_id = ContentMetadataId::new_with_version(
                     &incoming_content.parent_id.id,
-                    latest_version_of_parent,
+                    latest_version_of_parent.id.version,
                 );
                 new_content.push(content);
                 continue;
@@ -1009,7 +1009,7 @@ impl App {
                 let mut content = incoming_content.clone();
                 content.parent_id = ContentMetadataId::new_with_version(
                     &incoming_content.parent_id.id,
-                    latest_version_of_parent,
+                    latest_version_of_parent.id.version,
                 );
                 new_content.push(content);
                 continue;
@@ -1018,7 +1018,7 @@ impl App {
             let mut content = incoming_content.clone();
             content.parent_id = ContentMetadataId::new_with_version(
                 &incoming_content.parent_id.id,
-                latest_version_of_parent,
+                latest_version_of_parent.id.version,
             );
             identical_content.push(content);
         }
@@ -1089,7 +1089,7 @@ impl App {
                 })?
                 .ok_or_else(|| anyhow!("Content with id {} not found", content_id))?;
 
-            let id = ContentMetadataId::new_with_version(content_id, latest_version);
+            let id = ContentMetadataId::new_with_version(content_id, latest_version.id.version);
             updated_content_ids.push(id.clone());
         }
 
